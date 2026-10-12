@@ -1,0 +1,6 @@
+{
+  "name": "Commitment OS — AI Commitment Recovery Engine",
+  "description": "Recover commitments at risk of failure with AI root-cause analysis, smallest recovery actions, and Make.com automation integration using Gemma 4.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
