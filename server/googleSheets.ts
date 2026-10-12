@@ -94,18 +94,21 @@ export async function appendCommitmentToSheet(
     `https://sheets.googleapis.com/v4/spreadsheets/` +
     `${encodeURIComponent(spreadsheetId)}/values/`;
 
-  const headers = [
-    "Commitment ID",
-    "Created At",
-    "Commitment",
-    "Progress",
-    "Blocker",
-    "Dependencies",
-    "Risk Score",
-    "Risk Level",
-    "AI Analysis",
-  ];
-
+  
+const headers = [
+  "Commitment ID",
+  "Created At",
+  "Person / Commitment Owner",
+  "Target Deadline",
+  "Commitment Deliverable",
+  "Current Progress & Status",
+  "Stated Blocker or Impediment",
+  "Dependent Tasks & Downstream Stakes",
+  "Risk Score",
+  "Risk Level",
+  "AI Analysis",
+];
+  
   const request = async (url: string, init?: RequestInit) => {
     const response = await fetch(url, {
       ...init,
@@ -147,16 +150,18 @@ export async function appendCommitmentToSheet(
   };
 
   const row = [
-    get("commitmentId", get("id")),
-    new Date().toISOString(),
-    get("commitment", get("description")),
-    get("progress"),
-    get("blocker"),
-    get("dependencies"),
-    get("riskScore"),
-    get("riskLevel"),
-    get("analysis"),
-  ];
+  get("commitmentId", get("id")),
+  new Date().toISOString(),
+  get("person"),
+  get("deadline"),
+  get("commitment", get("description")),
+  get("progress"),
+  get("blocker"),
+  get("dependencies"),
+  get("riskScore"),
+  get("riskLevel"),
+  get("analysis"),
+];
 
   const result = await request(
     `${baseUrl}${encodeURIComponent(range)}:append` +
