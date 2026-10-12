@@ -22,10 +22,24 @@ export interface AnalysisResult {
   model: string;
 }
 
+export interface WebhookStatus {
+  attempted: boolean;
+  success: boolean;
+  commitmentId?: string;
+  statusCode?: number;
+  message: string;
+  error?: string;
+  dispatchedAt?: string;
+}
+
 export interface AnalyzeResponse {
   success: boolean;
   input: CommitmentInput;
   analysis: AnalysisResult;
+  riskScore?: number;
+  riskLevel?: string;
+  commitmentId?: string;
+  webhook?: WebhookStatus;
   error?: string;
 }
 
@@ -34,6 +48,7 @@ export interface HealthResponse {
   service: string;
   model: string;
   hasApiKey?: boolean;
+  hasMakeWebhook?: boolean;
   timestamp: string;
 }
 

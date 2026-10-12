@@ -38,6 +38,7 @@ export const CommitmentForm: React.FC<CommitmentFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     if (validate()) {
       onSubmit(formData);
     }

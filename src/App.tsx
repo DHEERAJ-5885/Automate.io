@@ -25,6 +25,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [lastInput, setLastInput] = useState<CommitmentInput | null>(null);
+  const [riskScore, setRiskScore] = useState<number | undefined>(undefined);
+  const [riskLevel, setRiskLevel] = useState<string | undefined>(undefined);
+  const [commitmentId, setCommitmentId] = useState<string | undefined>(undefined);
+  const [webhookStatus, setWebhookStatus] = useState<AnalyzeResponse['webhook'] | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isMakeModalOpen, setIsMakeModalOpen] = useState<boolean>(false);
 
@@ -45,6 +49,8 @@ export default function App() {
       dependentTasks: '',
     });
     setError(null);
+    setAnalysis(null);
+    setWebhookStatus(undefined);
   };
 
   const handleAnalyze = async (input: CommitmentInput) => {
@@ -68,10 +74,15 @@ export default function App() {
 
       setAnalysis(data.analysis);
       setLastInput(data.input);
+      setRiskScore(data.riskScore);
+      setRiskLevel(data.riskLevel);
+      setCommitmentId(data.commitmentId);
+      setWebhookStatus(data.webhook);
     } catch (err: any) {
       console.error('Failed to analyze commitment:', err);
       setError(err?.message || 'Unable to connect to Gemma 4 recovery engine.');
       setAnalysis(null);
+      setWebhookStatus(undefined);
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +134,10 @@ export default function App() {
             <AnalysisDisplay
               analysis={analysis}
               input={lastInput}
+              riskScore={riskScore}
+              riskLevel={riskLevel}
+              commitmentId={commitmentId}
+              webhook={webhookStatus}
               isLoading={isLoading}
               error={error}
             />

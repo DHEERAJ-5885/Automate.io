@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CommitmentInput } from './src/types.ts';
 import { analyzeCommitmentWithGemma } from './server/gemmaAnalyzer.ts';
+import { dispatchToMakeWebhook, calculateRiskMetrics } from './server/makeWebhook.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-skip-webhook');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -29,12 +30,14 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
   const hasApiKey = Boolean(process.env.GEMINI_API_KEY || process.env.MY_GEMMA_API_KEY);
+  const hasMakeWebhook = Boolean(process.env.MAKE_WEBHOOK_URL && process.env.MAKE_WEBHOOK_URL.trim());
 
   res.json({
     status: 'healthy',
     service: 'Commitment OS — AI Commitment Recovery Engine',
     model: GEMMA_MODEL,
     hasApiKey,
+    hasMakeWebhook,
     timestamp: new Date().toISOString(),
   });
 });
@@ -76,10 +79,35 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     // Analyze using Gemma 4 model
     const analysis = await analyzeCommitmentWithGemma(input);
 
+    // Compute standardized risk metrics
+    const { riskScore, riskLevel } = calculateRiskMetrics(analysis.status, analysis.urgency);
+    const commitmentId = String(body.commitmentId || `cmt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+
+    // Prevent circular recursion if call originated from Make.com or explicitly asks to skip webhook
+    const userAgent = String(req.headers['user-agent'] || '');
+    const skipHeader = req.headers['x-skip-webhook'] === 'true';
+    const skipBody = body.skipWebhook === true;
+    const isFromMake = userAgent.toLowerCase().includes('make/') || userAgent.toLowerCase().includes('integromat');
+
+    let webhookResult = undefined;
+    if (!skipHeader && !skipBody && !isFromMake) {
+      webhookResult = await dispatchToMakeWebhook(input, analysis, commitmentId);
+    } else {
+      webhookResult = {
+        attempted: false,
+        success: false,
+        message: 'Skipped webhook dispatch to prevent duplicate or circular automation execution.',
+      };
+    }
+
     return res.status(200).json({
       success: true,
+      commitmentId,
+      riskLevel,
+      riskScore,
       input,
       analysis,
+      webhook: webhookResult,
     });
   } catch (error: any) {
     console.error('Error analyzing commitment with Gemma 4:', error);

@@ -12,13 +12,20 @@ import {
   Clock,
   Cpu,
   Layers,
-  HelpCircle,
+  Workflow,
+  ShieldAlert,
+  Info,
+  Radio,
 } from 'lucide-react';
-import { AnalysisResult, CommitmentInput } from '../types.ts';
+import { AnalysisResult, CommitmentInput, WebhookStatus } from '../types.ts';
 
 interface AnalysisDisplayProps {
   analysis: AnalysisResult | null;
   input: CommitmentInput | null;
+  riskScore?: number;
+  riskLevel?: string;
+  commitmentId?: string;
+  webhook?: WebhookStatus;
   isLoading: boolean;
   error: string | null;
 }
@@ -26,6 +33,10 @@ interface AnalysisDisplayProps {
 export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   analysis,
   input,
+  riskScore,
+  riskLevel,
+  commitmentId,
+  webhook,
   isLoading,
   error,
 }) => {
@@ -40,9 +51,29 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
     setTimeout(() => setCopiedAction(false), 2000);
   };
 
+  const canonicalPayload = analysis && input ? {
+    commitmentId: commitmentId || `cmt_${Date.now()}`,
+    createdAt: analysis.analyzedAt,
+    person: input.person,
+    commitment: input.commitment,
+    deadline: input.deadline,
+    currentStatus: input.currentStatus,
+    blocker: input.blocker,
+    dependentTasks: input.dependentTasks,
+    riskLevel: riskLevel || (analysis.status === 'BLOCKED' ? 'CRITICAL' : analysis.status === 'AT RISK' ? 'HIGH' : 'LOW'),
+    riskScore: riskScore ?? (analysis.status === 'BLOCKED' ? 90 : analysis.status === 'AT RISK' ? 65 : 20),
+    rootCause: analysis.rootBlocker,
+    impact: analysis.downstreamImpact,
+    recoveryPlan: analysis.smallestRecoveryAction,
+    revisedNextStep: analysis.revisedNextStep,
+    urgency: analysis.urgency,
+    analysis,
+    webhookStatus: webhook || { attempted: false, success: false, message: 'Unconfigured' },
+  } : null;
+
   const handleCopyJson = () => {
-    if (!analysis) return;
-    navigator.clipboard.writeText(JSON.stringify({ input, analysis }, null, 2));
+    if (!canonicalPayload) return;
+    navigator.clipboard.writeText(JSON.stringify(canonicalPayload, null, 2));
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 2000);
   };
@@ -55,10 +86,10 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         </div>
         <div className="space-y-1.5">
           <h3 className="text-base font-semibold text-slate-100">
-            Gemma 4 Deep Commitment Analysis
+            Gemma 4 Deep Commitment Analysis & Automation Dispatch
           </h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Extracting root constraints, evaluating ripple effects on downstream dependencies, and synthesizing the highest-leverage micro-recovery action...
+            Extracting root constraints, calculating risk score, synthesizing micro-recovery action, and preparing Make.com webhook dispatch...
           </p>
         </div>
         <div className="flex justify-center items-center space-x-1.5 pt-2">
@@ -79,7 +110,7 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             <h3 className="text-sm font-semibold text-rose-300">Analysis Error Encountered</h3>
             <p className="text-xs text-rose-200/90 leading-relaxed">{error}</p>
             <p className="text-[11px] text-rose-300/70 pt-1">
-              Note: Commitment OS does not fabricate synthetic results when model execution fails. Please verify your GEMINI_API_KEY environment variable.
+              Note: Commitment OS preserves system reliability and does not fabricate fake outputs. Check GEMINI_API_KEY environment variable.
             </p>
           </div>
         </div>
@@ -94,10 +125,10 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           <Layers className="h-6 w-6" />
         </div>
         <h3 className="text-sm font-semibold text-slate-300 mb-1">
-          Awaiting Commitment Analysis
+          Awaiting Commitment Submission
         </h3>
         <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-          Select one of the benchmark presets above or fill out the commitment details to generate root-cause recovery actions powered by Gemma 4.
+          Submit your commitment deliverable or pick a benchmark preset to generate a Gemma 4 diagnosis and trigger the Make.com recovery workflow.
         </p>
       </div>
     );
@@ -134,9 +165,12 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
     CRITICAL: 'bg-rose-950/80 text-rose-300 border-rose-800',
   }[analysis.urgency];
 
+  const calculatedRiskScore = riskScore ?? (analysis.status === 'BLOCKED' ? 90 : analysis.status === 'AT RISK' ? 65 : 20);
+  const calculatedRiskLevel = riskLevel ?? (analysis.status === 'BLOCKED' ? 'CRITICAL' : analysis.status === 'AT RISK' ? 'HIGH' : 'LOW');
+
   return (
     <div className="space-y-4">
-      {/* Top Banner: Status, Urgency, Model */}
+      {/* Top Banner: Status, Urgency, Risk Score, Model */}
       <div className={`rounded-2xl border p-5 ${statusStyles.bg} transition-all`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
@@ -144,15 +178,20 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
               <StatusIcon className={`h-6 w-6 ${statusStyles.accent}`} />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
-                  Status Evaluation:
+                  Status:
                 </span>
                 <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${statusStyles.badge}`}>
                   {analysis.status}
                 </span>
+
+                {/* Risk Score Pill */}
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-slate-200">
+                  Risk Score: <strong className="text-cyan-300">{calculatedRiskScore}/100</strong> ({calculatedRiskLevel})
+                </span>
               </div>
-              <h2 className="text-base font-bold text-white mt-0.5">
+              <h2 className="text-base font-bold text-white mt-1">
                 {input?.commitment || 'Commitment Assessment'}
               </h2>
             </div>
@@ -173,6 +212,66 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           </div>
         </div>
       </div>
+
+      {/* MAKE.COM AUTOMATION STATUS BANNER */}
+      {webhook && (
+        <div
+          className={`rounded-xl border p-4 text-xs transition-all ${
+            webhook.attempted && webhook.success
+              ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-200'
+              : webhook.attempted && !webhook.success
+              ? 'bg-amber-950/30 border-amber-800/60 text-amber-200'
+              : 'bg-slate-900/60 border-slate-800 text-slate-400'
+          }`}
+        >
+          <div className="flex items-start space-x-3">
+            <div className="p-1.5 rounded-lg bg-slate-950/70 border border-white/10 shrink-0 mt-0.5">
+              <Workflow
+                className={`h-4 w-4 ${
+                  webhook.attempted && webhook.success
+                    ? 'text-emerald-400'
+                    : webhook.attempted
+                    ? 'text-amber-400'
+                    : 'text-slate-400'
+                }`}
+              />
+            </div>
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-200 flex items-center space-x-1.5">
+                  <span>
+                    {webhook.attempted && webhook.success
+                      ? '⚡ Make.com Webhook Dispatched'
+                      : webhook.attempted
+                      ? '⚠️ Make.com Webhook Notice'
+                      : 'ℹ️ Make.com Automation Standalone Mode'}
+                  </span>
+                  {webhook.statusCode && (
+                    <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-300">
+                      HTTP {webhook.statusCode}
+                    </span>
+                  )}
+                </span>
+                {commitmentId && (
+                  <span className="font-mono text-[10px] text-slate-400">
+                    ID: {commitmentId}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] leading-relaxed opacity-90">
+                {webhook.message}
+                {webhook.error && <span className="block text-rose-300 mt-0.5">Detail: {webhook.error}</span>}
+              </p>
+              {webhook.attempted && webhook.success && (
+                <p className="text-[10px] text-emerald-400/90 pt-0.5 flex items-center space-x-1">
+                  <Check className="h-3 w-3" />
+                  <span>Real payload delivered to Make.com scenario → Google Sheets & Gmail pipelines active.</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CORE FEATURE: The Smallest Recovery Action (Hero Card) */}
       <div className="relative overflow-hidden rounded-2xl border-2 border-indigo-500/40 bg-gradient-to-br from-indigo-950/50 via-slate-900 to-slate-900 p-6 shadow-xl shadow-indigo-950/30">
@@ -233,7 +332,7 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-2">
           <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300 uppercase tracking-wider">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-            <span>Diagnosed Root Blocker</span>
+            <span>Diagnosed Root Blocker (Underlying Constraint)</span>
           </div>
           <p className="text-sm text-slate-200 font-medium leading-relaxed">
             {analysis.rootBlocker}
@@ -278,7 +377,7 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
               className="inline-flex items-center space-x-1 text-slate-400 hover:text-slate-200 transition cursor-pointer"
             >
               <Code2 className="h-3.5 w-3.5" />
-              <span>{showJson ? 'Hide JSON Output' : 'View Make.com JSON'}</span>
+              <span>{showJson ? 'Hide Make.com JSON' : 'Inspect Make.com Webhook Payload'}</span>
             </button>
             {showJson && (
               <button
@@ -292,9 +391,12 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           </div>
         </div>
 
-        {showJson && (
+        {showJson && canonicalPayload && (
           <div className="mt-2.5 bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-x-auto text-[11px] font-mono text-slate-300 leading-relaxed shadow-inner">
-            <pre>{JSON.stringify({ success: true, input, analysis }, null, 2)}</pre>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-sans font-semibold">
+              Canonical Payload Format Sent To Make.com Webhook
+            </div>
+            <pre>{JSON.stringify(canonicalPayload, null, 2)}</pre>
           </div>
         )}
       </div>

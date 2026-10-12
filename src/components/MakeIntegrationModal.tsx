@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Workflow, Globe, ArrowRight, ExternalLink, Terminal, ShieldCheck } from 'lucide-react';
+import { X, Copy, Check, Workflow, Globe, ArrowRight, ExternalLink, Terminal, ShieldCheck, Zap } from 'lucide-react';
 
 interface MakeIntegrationModalProps {
   isOpen: boolean;
@@ -12,22 +12,45 @@ export const MakeIntegrationModal: React.FC<MakeIntegrationModalProps> = ({ isOp
 
   if (!isOpen) return null;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.run.app';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://automate-io.onrender.com';
   const endpointUrl = `${origin}/api/analyze`;
   const healthUrl = `${origin}/api/health`;
 
-  const samplePayload = {
+  const canonicalMakePayload = {
+    commitmentId: "cmt_1728719283_ab3x",
+    createdAt: "2026-10-12T01:50:00.000Z",
     person: "Elena Rostova",
     commitment: "Ship Stripe payment elements upgrade for European merchant tier",
     deadline: "Tomorrow at 12:00 PM",
     currentStatus: "In progress, failing 2 edge tests on VAT currency rounding",
     blocker: "Ambiguity around Euro rounding rules in currency calculation spec",
-    dependentTasks: "EU Merchant invoices rollout, Q4 billing cycle cutover"
+    dependentTasks: "EU Merchant invoices rollout, Q4 billing cycle cutover",
+    riskLevel: "HIGH",
+    riskScore: 65,
+    rootCause: "Unclear specification for Euro rounding in VAT tax calculations",
+    impact: "EU merchant invoices cannot be finalized, blocking Q4 billing cycle cutover",
+    recoveryPlan: "Ping the product manager with the 2 failing edge cases to get approval for banker's rounding",
+    revisedNextStep: "Implement the agreed rounding rule and rerun the staging integration test suite",
+    urgency: "HIGH",
+    analysis: {
+      status: "AT RISK",
+      rootBlocker: "Unclear specification for Euro rounding in VAT tax calculations",
+      smallestRecoveryAction: "Ping the product manager with the 2 failing edge cases to get approval for banker's rounding",
+      urgency: "HIGH",
+      model: "gemma-4-26b-a4b-it"
+    }
   };
 
   const curlCommand = `curl -X POST "${endpointUrl}" \\
   -H "Content-Type: application/json" \\
-  -d '${JSON.stringify(samplePayload, null, 2)}'`;
+  -d '{
+    "person": "Elena Rostova",
+    "commitment": "Ship Stripe payment elements upgrade for European merchant tier",
+    "deadline": "Tomorrow at 12:00 PM",
+    "currentStatus": "In progress, failing 2 edge tests on VAT currency rounding",
+    "blocker": "Ambiguity around Euro rounding rules in currency calculation spec",
+    "dependentTasks": "EU Merchant invoices rollout, Q4 billing cycle cutover"
+  }'`;
 
   const handleCopyCurl = () => {
     navigator.clipboard.writeText(curlCommand);
@@ -36,7 +59,7 @@ export const MakeIntegrationModal: React.FC<MakeIntegrationModalProps> = ({ isOp
   };
 
   const handleCopyPayload = () => {
-    navigator.clipboard.writeText(JSON.stringify(samplePayload, null, 2));
+    navigator.clipboard.writeText(JSON.stringify(canonicalMakePayload, null, 2));
     setCopiedPayload(true);
     setTimeout(() => setCopiedPayload(false), 2000);
   };
@@ -53,7 +76,7 @@ export const MakeIntegrationModal: React.FC<MakeIntegrationModalProps> = ({ isOp
             <div>
               <h2 className="text-base font-bold text-white">Make.com Webhook Integration Guide</h2>
               <p className="text-xs text-slate-400">
-                Direct compatibility with your Google Sheets & Gmail alert scenarios
+                End-to-end integration: Website Form → Gemma 4 → Make.com → Sheets & Gmail
               </p>
             </div>
           </div>
@@ -66,88 +89,85 @@ export const MakeIntegrationModal: React.FC<MakeIntegrationModalProps> = ({ isOp
         </div>
 
         {/* Workflow Overview */}
-        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 text-xs space-y-2">
+        <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 text-xs space-y-2.5">
           <div className="flex items-center space-x-2 text-indigo-400 font-semibold uppercase tracking-wider">
             <ShieldCheck className="h-4 w-4" />
-            <span>How It Fits Your Existing Make.com Workflow</span>
+            <span>How The Seamless Hackathon Workflow Operates</span>
           </div>
           <p className="text-slate-300 leading-relaxed">
-            In your Make.com scenario, insert an <strong>HTTP "Make a request"</strong> module right after your trigger (webhook, form, or schedule). Send the commitment fields to Commitment OS.
-            Commitment OS executes <strong>Gemma 4</strong> and returns the structured recovery decision, enabling your downstream Google Sheets recorder and Gmail alert steps.
+            1. <strong>User Submits Form:</strong> The user fills out a commitment deliverable on the web application.
+          </p>
+          <p className="text-slate-300 leading-relaxed">
+            2. <strong>Server AI Analysis:</strong> The backend executes <strong>Gemma 4</strong> to calculate the root cause, downstream impact, risk score, and smallest recovery action.
+          </p>
+          <p className="text-slate-300 leading-relaxed">
+            3. <strong>Automatic Webhook Trigger:</strong> If <code className="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded font-mono">MAKE_WEBHOOK_URL</code> is set in Render, the backend immediately POSTs the complete analysis to Make.com.
+          </p>
+          <p className="text-slate-300 leading-relaxed">
+            4. <strong>Downstream Execution:</strong> Make.com captures the payload and automatically appends a row to <strong>Google Sheets</strong> and delivers alerts to <strong>Gmail</strong>.
           </p>
         </div>
 
-        {/* Endpoints */}
-        <div className="space-y-3">
+        {/* Canonical Webhook Payload Preview */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
+              <Zap className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Payload Delivered to Make.com Webhook</span>
+            </span>
+            <button
+              onClick={handleCopyPayload}
+              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 cursor-pointer transition"
+            >
+              {copiedPayload ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copiedPayload ? 'Copied' : 'Copy Payload JSON'}</span>
+            </button>
+          </div>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 overflow-x-auto text-[11px] font-mono text-slate-300 max-h-48">
+            <pre>{JSON.stringify(canonicalMakePayload, null, 2)}</pre>
+          </div>
+        </div>
+
+        {/* Backend Environment Variable Setup */}
+        <div className="space-y-2 text-xs">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Available Server Endpoints
+            Render Deployment Environment Variable
           </h3>
-          
-          <div className="space-y-2 font-mono text-xs">
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <div className="font-mono text-slate-200">
+              <span className="text-indigo-400">MAKE_WEBHOOK_URL</span> = https://hook.eu1.make.com/your-custom-webhook-id
+            </div>
+            <p className="text-slate-400 text-[11px] pt-1">
+              Add this in your Render Dashboard under <strong>Environment</strong>. The backend automatically picks it up and fires whenever a commitment is analyzed.
+            </p>
+          </div>
+        </div>
+
+        {/* Available Endpoints */}
+        <div className="space-y-2 text-xs">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Direct API Endpoints
+          </h3>
+          <div className="space-y-1.5 font-mono text-xs">
+            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mr-2">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mr-2">
                   POST
                 </span>
                 <span className="text-slate-200">{endpointUrl}</span>
               </div>
-              <span className="text-slate-400 text-[11px] font-sans">Commitment Recovery Analysis</span>
+              <span className="text-slate-400 text-[11px] font-sans">AI Recovery & Auto-Dispatch</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
               <div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mr-2">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mr-2">
                   GET
                 </span>
                 <span className="text-slate-200">{healthUrl}</span>
               </div>
               <span className="text-slate-400 text-[11px] font-sans">Service Health Check</span>
             </div>
-          </div>
-        </div>
-
-        {/* Make.com HTTP Module Setup */}
-        <div className="space-y-2 text-xs">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Make.com HTTP Module Settings
-          </h3>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
-            <li className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">URL</span>
-              <span className="font-mono text-indigo-300 break-all">{endpointUrl}</span>
-            </li>
-            <li className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Method</span>
-              <span className="font-semibold text-emerald-400">POST</span>
-            </li>
-            <li className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Headers</span>
-              <span className="font-mono text-slate-200">Content-Type: application/json</span>
-            </li>
-            <li className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span className="text-slate-400 block text-[11px]">Parse response</span>
-              <span className="font-semibold text-cyan-400">Yes (returns structured JSON)</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* cURL Snippet */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
-              <Terminal className="h-3.5 w-3.5" />
-              <span>cURL Test Command</span>
-            </span>
-            <button
-              onClick={handleCopyCurl}
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 cursor-pointer transition"
-            >
-              {copiedCurl ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-              <span>{copiedCurl ? 'Copied' : 'Copy cURL'}</span>
-            </button>
-          </div>
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 overflow-x-auto text-[11px] font-mono text-slate-300">
-            <pre>{curlCommand}</pre>
           </div>
         </div>
 
