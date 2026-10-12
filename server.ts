@@ -8,6 +8,7 @@ import { dispatchToMakeWebhook, calculateRiskMetrics } from './server/makeWebhoo
 import { CommitmentInput } from './src/types.ts';
 import { analyzeCommitmentWithGemma } from './server/gemmaAnalyzer.ts';
 import { dispatchToMakeWebhook, calculateRiskMetrics } from './server/makeWebhook.ts';
+import { appendCommitmentToSheet } from './server/googleSheets.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
